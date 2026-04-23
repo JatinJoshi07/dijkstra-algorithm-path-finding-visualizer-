@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PathFinder Pro · Dijkstra Visualizer</title>
+  <style>
+    :root {
+      --color-background-primary: light-dark(rgba(255, 255, 255, 1), rgba(28, 28, 30, 1));
+      --color-background-secondary: light-dark(rgba(248, 248, 246, 1), rgba(38, 38, 40, 1));
+      --color-background-tertiary: light-dark(rgba(250, 249, 245, 1), rgba(20, 20, 22, 1));
+      --color-text-primary: light-dark(rgba(20, 20, 19, 1), rgba(250, 249, 245, 1));
+      --color-text-secondary: light-dark(rgba(61, 61, 58, 1), rgba(194, 192, 182, 1));
+      --color-text-tertiary: light-dark(rgba(115, 114, 108, 1), rgba(156, 154, 146, 1));
+      --color-border-secondary: light-dark(rgba(31, 30, 29, 0.3), rgba(222, 220, 209, 0.3));
+      --color-border-tertiary: light-dark(rgba(31, 30, 29, 0.15), rgba(222, 220, 209, 0.15));
+      --color-accent: #3b82f6;
+      --color-accent-hover: #2563eb;
+      --color-success: #10b981;
+      --color-warning: #f59e0b;
+      --color-danger: #ef4444;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --border-radius-sm: 6px;
+      --border-radius-md: 8px;
+      --border-radius-lg: 12px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+    
+    body { 
+      font-family: var(--font-sans); 
+      background: var(--color-background-secondary);
+      padding: 24px;
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+    
+    /* Header Styles */
+    .header {
+      margin-bottom: 24px;
+    }
+    
+    h1 { 
+      font-size: 32px; 
+      font-weight: 700; 
+      color: var(--color-text-primary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .badge {
+      background: linear-gradient(135deg, var(--color-accent), #8b5cf6);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .subtitle {
+      color: var(--color-text-tertiary);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    /* Layout */
+    .wrap { 
+      display: grid; 
+      grid-template-columns: 1fr 380px; 
+      gap: 20px; 
+    }
+    
+    @media (max-width: 1024px) { 
+      .wrap { grid-template-columns: 1fr; } 
+      body { padding: 16px; }
+    }
+    
+    /* Panel Styles */
+    .panel {
+      background: var(--color-background-primary); 
+      border: 1px solid var(--color-border-tertiary); 
+      border-radius: var(--border-radius-lg); 
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    
+    .panel:hover {
+      box-shadow: var(--shadow-md);
+    }
+    
+    /* Canvas Styles */
+    #map-canvas {
+      width: 100%; 
+      height: 420px; 
+      cursor: pointer; 
+      display: block; 
+      border-radius: var(--border-radius-md); 
+      background: var(--color-background-secondary);
+      transition: var(--transition);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    #map-canvas:hover {
+      box-shadow: var(--shadow-lg);
+      transform: scale(1.005);
+    }
+    
+    #map-canvas:active {
+      cursor: grabbing;
+    }
+    
+    /* Control Styles */
+    .ctrl-row { 
+      display: flex; 
+      gap: 16px; 
+      align-items: flex-end; 
+      margin-bottom: 20px; 
+      flex-wrap: wrap;
+    }
+    
+    .select-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .select-group label { 
+      font-size: 12px; 
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    select { 
+      font-size: 14px; 
+      padding: 10px 14px; 
+      border-radius: var(--border-radius-md); 
+      border: 1.5px solid var(--color-border-secondary); 
+      background: var(--color-background-primary); 
+      color: var(--color-text-primary); 
+      height: 44px;
+      min-width: 160px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-weight: 500;
+    }
+    
+    select:hover {
+      border-color: var(--color-accent);
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+    
+    button { 
+      font-size: 14px; 
+      font-weight: 500;
+      padding: 10px 18px; 
+      border-radius: var(--border-radius-md); 
+      border: 1.5px solid var(--color-border-secondary); 
+      background: var(--color-background-primary); 
+      color: var(--color-text-primary); 
+      cursor: pointer; 
+      height: 44px;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    
+    button:hover { 
+      background: var(--color-background-secondary); 
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      border-color: var(--color-accent);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.primary { 
+      background: linear-gradient(135deg, var(--color-accent), #2563eb);
+      color: white; 
+      border-color: transparent;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    }
+    
+    button.primary:hover {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+    }
+    
+    /* Legend Styles */
+    .legend { 
+      display: flex; 
+      gap: 20px; 
+      flex-wrap: wrap; 
+      font-size: 13px; 
+      color: var(--color-text-secondary); 
+      margin-bottom: 20px;
+      padding: 12px 0;
+      border-top: 1px solid var(--color-border-tertiary);
+      border-bottom: 1px solid var(--color-border-tertiary);
+    }
+    
+    .leg-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+    
+    .leg-dot { 
+      display: inline-block; 
+      width: 14px; 
+      height: 14px; 
+      border-radius: 50%;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    
+    .leg-item:hover .leg-dot {
+      transform: scale(1.2);
+    }
+    
+    /* Result Box */
+    .result-box { 
+      font-size: 14px; 
+      margin-top: 20px; 
+      padding: 16px; 
+      background: var(--color-background-secondary); 
+      border-radius: var(--border-radius-md); 
+      min-height: 70px; 
+      border-left: 4px solid var(--color-accent);
+      transition: var(--transition);
+    }
+    
+    .result-box:empty {
+      display: none;
+    }
+    
+    .path-tag { 
+      display: inline-block; 
+      background: linear-gradient(135deg, var(--color-success), #059669);
+      color: white; 
+      border-radius: 20px; 
+      padding: 6px 14px; 
+      font-size: 13px; 
+      font-weight: 600;
+      margin: 3px 5px 3px 0;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    
+    .path-tag:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    /* Section Title */
+    .section-title { 
+      font-size: 15px; 
+      font-weight: 600; 
+      color: var(--color-text-primary); 
+      margin-bottom: 16px; 
+      letter-spacing: .01em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    /* Matrix Styles */
+    .matrix-wrap { 
+      overflow-x: auto; 
+      margin-top: 8px;
+      border-radius: var(--border-radius-md);
+    }
+    
+    .matrix-wrap::-webkit-scrollbar {
+      height: 6px;
+    }
+    
+    .matrix-wrap::-webkit-scrollbar-thumb {
+      background: var(--color-border-secondary);
+      border-radius: 3px;
+    }
+    
+    table.mx { 
+      border-collapse: collapse; 
+      font-size: 12px; 
+      width: 100%;
+    }
+    
+    table.mx th, table.mx td { 
+      padding: 10px 8px; 
+      text-align: center; 
+      border: 1px solid var(--color-border-tertiary); 
+      min-width: 42px;
+      transition: var(--transition);
+    }
+    
+    table.mx th { 
+      background: var(--color-background-secondary); 
+      color: var(--color-text-secondary); 
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    table.mx td {
+      font-weight: 500;
+    }
+    
+    table.mx td.hi-path { 
+      background: linear-gradient(135deg, var(--color-success), #059669);
+      color: white; 
+      font-weight: 700;
+      animation: pulse 1.5s ease-in-out;
+    }
+    
+    table.mx td.hi-src { 
+      background: linear-gradient(135deg, var(--color-warning), #d97706);
+      color: white; 
+      font-weight: 600;
+    }
+    
+    table.mx td.inf { 
+      color: var(--color-text-tertiary);
+      opacity: 0.6;
+      font-style: italic;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    
+    /* Steps Styles */
+    .steps { 
+      max-height: 340px; 
+      overflow-y: auto; 
+      font-size: 13px; 
+      line-height: 1.6;
+      padding-right: 6px;
+    }
+    
+    .steps::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .steps::-webkit-scrollbar-thumb {
+      background: var(--color-border-secondary);
+      border-radius: 3px;
+    }
+    
+    .step-item { 
+      padding: 10px 12px; 
+      border-left: 3px solid var(--color-border-tertiary); 
+      margin-bottom: 8px; 
+      color: var(--color-text-secondary);
+      background: var(--color-background-secondary);
+      border-radius: var(--border-radius-sm);
+      transition: var(--transition);
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .step-item.active { 
+      border-left-color: var(--color-accent); 
+      color: var(--color-text-primary); 
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+      font-weight: 500;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .step-item b { 
+      color: var(--color-text-primary);
+      font-weight: 700;
+    }
+    
+    /* Hint Styles */
+    .hint { 
+      font-size: 12px; 
+      color: var(--color-text-tertiary); 
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--color-background-secondary);
+      border-radius: var(--border-radius-sm);
+    }
+    
+    /* Stats Panel */
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent);
+      border-radius: var(--border-radius-md);
+    }
+    
+    .stat {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    
+    .stat-value {
+      font-weight: 700;
+      color: var(--color-text-primary);
+      font-size: 18px;
+    }
+    
+    .stat-label {
+      color: var(--color-text-tertiary);
+      font-size: 13px;
+    }
+    
+    /* Loading Animation */
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--color-border-tertiary);
+      border-top-color: var(--color-accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Tooltip */
+    [data-tooltip] {
+      position: relative;
+    }
+    
+    [data-tooltip]:before {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      padding: 6px 10px;
+      background: var(--color-text-primary);
+      color: var(--color-background-primary);
+      font-size: 12px;
+      border-radius: var(--border-radius-sm);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: var(--transition);
+      z-index: 1000;
+    }
+    
+    [data-tooltip]:hover:before {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>
+        <span>🗺️</span> PathFinder Pro
+        <span class="badge">Dijkstra Algorithm</span>
+      </h1>
+      <div class="subtitle">
+        <span>Interactive shortest path visualization</span>
+        <span>•</span>
+        <span>Click on map or use controls</span>
+        <span>•</span>
+        <span id="node-count">8 locations</span>
+      </div>
+    </div>
+    
+    <div class="wrap">
+      <!-- Left Panel - Map and Controls -->
+      <div>
+        <div class="panel">
+          <div class="ctrl-row">
+            <div class="select-group">
+              <label>
+                <span>🚀</span> Start Node
+              </label>
+              <select id="sel-start" aria-label="Select start node" data-tooltip="Choose starting location"></select>
+            </div>
+            
+            <div class="select-group">
+              <label>
+                <span>🎯</span> End Node
+              </label>
+              <select id="sel-end" aria-label="Select end node" data-tooltip="Choose destination"></select>
+            </div>
+            
+            <div class="button-group">
+              <button onclick="swapNodes()" data-tooltip="Swap start and end">
+                <span>⇄</span> Swap
+              </button>
+              <button class="primary" onclick="findPath()" data-tooltip="Find shortest path">
+                <span>🔍</span> Find Path
+              </button>
+              <button onclick="reset()" data-tooltip="Reset visualization">
+                <span>🔄</span> Reset
+              </button>
+            </div>
+          </div>
+          
+          <div class="legend">
+            <div class="leg-item" data-tooltip="Starting point">
+              <span class="leg-dot" style="background: #22c55e;"></span>
+              <span>Start Node</span>
+            </div>
+            <div class="leg-item" data-tooltip="Destination">
+              <span class="leg-dot" style="background: #ef4444;"></span>
+              <span>End Node</span>
+            </div>
+            <div class="leg-item" data-tooltip="Nodes on shortest path">
+              <span class="leg-dot" style="background: #f59e0b;"></span>
+              <span>Path Node</span>
+            </div>
+            <div class="leg-item" data-tooltip="Unvisited nodes">
+              <span class="leg-dot" style="background: #6366f1;"></span>
+              <span>Normal Node</span>
+            </div>
+            <div class="leg-item" data-tooltip="Edge weight in kilometers">
+              <span style="opacity:0.7;">🔗</span>
+              <span>Edge Weight (km)</span>
+            </div>
+          </div>
+          
+          <canvas id="map-canvas" width="283" height="300"></canvas>
+          
+          <div class="result-box" id="result-box">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 20px;">👆</span> 
+              <div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Ready to find shortest path</div>
+                <div style="font-size: 13px; opacity: 0.8;">Click on map nodes or use dropdown menus above</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stats" id="stats-panel" style="display: none;">
+            <div class="stat">
+              <span class="stat-label">📏 Distance:</span>
+              <span class="stat-value" id="stat-distance">-</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">🔍 Nodes Visited:</span>
+              <span class="stat-value" id="stat-visited">-</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">🛤️ Path Length:</span>
+              <span class="stat-value" id="stat-pathlen">-</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">⚡ Algorithm:</span>
+              <span class="stat-value" style="font-size: 14px;">Dijkstra</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Panel - Matrix and Steps -->
+      <div>
+        <div class="panel" style="margin-bottom: 20px;">
+          <div class="section-title">
+            <span>
+              <span>📊</span> Adjacency Matrix
+            </span>
+            <span style="font-size: 12px; font-weight: 400; opacity: 0.7;">
+              Values in kilometers
+            </span>
+          </div>
+          <div class="matrix-wrap" id="matrix-wrap"></div>
+          <div class="hint">
+            <span>💡</span>
+            <span><strong>∞</strong> = no direct connection</span>
+            <span>•</span>
+            <span><strong>—</strong> = same node</span>
+            <span>•</span>
+            <span><span style="background: var(--color-success); width: 12px; height: 12px; display: inline-block; border-radius: 3px;"></span> = path edge</span>
+          </div>
+        </div>
+        
+        <div class="panel">
+          <div class="section-title">
+            <span>
+              <span>📝</span> Algorithm Execution Steps
+            </span>
+            <div style="display: flex; gap: 8px;">
+              <button onclick="toggleAutoScroll()" id="autoscroll-btn" 
+                      style="height: 32px; padding: 6px 12px; font-size: 12px;" 
+                      data-tooltip="Toggle auto-scroll">
+                <span>⚡</span> Auto-scroll
+              </button>
+              <button onclick="clearSteps()" 
+                      style="height: 32px; padding: 6px 12px; font-size: 12px;"
+                      data-tooltip="Clear step history">
+                <span>🗑️</span>
+              </button>
+            </div>
+          </div>
+          <div class="steps" id="steps-list">
+            <div class="step-item" style="opacity: 0.8;">
+              <span>🎯 Ready to execute Dijkstra's algorithm</span>
+            </div>
+            <div class="step-item" style="opacity: 0.6; font-style: italic;">
+              <span>Select start and end nodes to begin pathfinding</span>
+            </div>
+          </div>
+          <div class="hint">
+            <span>🎨</span>
+            <span>Click directly on map nodes for quick selection</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      'use strict';
+      
+      const INF = Infinity;
+      const NODES = [
+        {name: "Home",        x: 0.12, y: 0.45, icon: "🏠"},
+        {name: "School",      x: 0.30, y: 0.20, icon: "📚"},
+        {name: "Garden",      x: 0.30, y: 0.70, icon: "🌳"},
+        {name: "Hospital",    x: 0.50, y: 0.45, icon: "🏥"},
+        {name: "Office",      x: 0.68, y: 0.20, icon: "💼"},
+        {name: "High School", x: 0.68, y: 0.70, icon: "🏫"},
+        {name: "College",     x: 0.88, y: 0.82, icon: "🎓"},
+        {name: "Mall",        x: 0.88, y: 0.38, icon: "🛍️"},
+      ];
+      
+      const N = NODES.length;
+      const MATRIX = [
+        [0,  5,  4,  INF, INF, INF, INF, INF],
+        [5,  0,  3,  6,   INF, INF, INF, INF],
+        [4,  3,  0,  4,   INF, 8,   INF, INF],
+        [INF, 6,  4,  0,   5,   6,   INF, INF],
+        [INF, INF, INF, 5,   0,   4,   INF, 7  ],
+        [INF, INF, 8,   6,   4,   0,   6,   5  ],
+        [INF, INF, INF, INF, INF, 6,   0,   3  ],
+        [INF, INF, INF, INF, 7,   5,   3,   0  ],
+      ];
+
+      // State management
+      let startNode = 0;
+      let endNode = 7;
+      let shortPath = [];
+      let clickPhase = 0;
+      let autoScroll = true;
+      let lastSteps = [];
+      let isProcessing = false;
+      
+      // Canvas elements
+      const canvas = document.getElementById('map-canvas');
+      const ctx = canvas.getContext('2d');
+      let W = 0, H = 0;
+
+      // Utility functions
+      const nx = i => NODES[i].x * W;
+      const ny = i => NODES[i].y * H;
+      const isDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      // Enhanced roundRect with better corner handling
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.moveTo(x + r, y);
+        this.lineTo(x + w - r, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r);
+        this.lineTo(x + w, y + h - r);
+        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        this.lineTo(x + r, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r);
+        this.lineTo(x, y + r);
+        this.quadraticCurveTo(x, y, x + r, y);
+        return this;
+      };
+
+      // Responsive canvas handling
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        W = rect.width - 48;
+        H = 420;
+        canvas.width = W * devicePixelRatio;
+        canvas.height = H * devicePixelRatio;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+        draw();
+      }
+
+      // Enhanced drawing with better visual effects
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        
+        // Gradient background
+        const gradient = ctx.createLinearGradient(0, 0, W, H);
+        if (isDark()) {
+          gradient.addColorStop(0, '#1a1a1c');
+          gradient.addColorStop(1, '#2a2a2c');
+        } else {
+          gradient.addColorStop(0, '#fafaf8');
+          gradient.addColorStop(1, '#f0f0ee');
+        }
+        ctx.fillStyle = gradient;
+        ctx.roundRect(0, 0, W, H, 12);
+        ctx.fill();
+
+        // Subtle grid pattern
+        ctx.strokeStyle = isDark() ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
+        ctx.lineWidth = 0.5;
+        for(let x = 40; x < W; x += 50) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, H);
+          ctx.stroke();
+        }
+        for(let y = 40; y < H; y += 50) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(W, y);
+          ctx.stroke();
+        }
+
+        // Draw edges with enhanced styling
+        for(let i = 0; i < N; i++) {
+          for(let j = i + 1; j < N; j++) {
+            if(MATRIX[i][j] === INF) continue;
+            
+            const inPath = shortPath.length > 1 && 
+              shortPath.some((p, k) => k < shortPath.length - 1 &&
+                ((shortPath[k] === i && shortPath[k+1] === j) || 
+                 (shortPath[k] === j && shortPath[k+1] === i)));
+            
+            ctx.beginPath();
+            ctx.moveTo(nx(i), ny(i));
+            ctx.lineTo(nx(j), ny(j));
+            
+            if(inPath) {
+              // Glowing path effect
+              ctx.shadowColor = '#ef4444';
+              ctx.shadowBlur = 12;
+              ctx.strokeStyle = '#ef4444';
+              ctx.lineWidth = 4.5;
+            } else {
+              ctx.shadowBlur = 0;
+              ctx.strokeStyle = isDark() ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+              ctx.lineWidth = 2;
+            }
+            ctx.stroke();
+            
+            // Reset shadow for weight labels
+            ctx.shadowBlur = 0;
+
+            // Enhanced weight label positioning
+            const mx = (nx(i) + nx(j)) / 2;
+            const my = (ny(i) + ny(j)) / 2;
+            const angle = Math.atan2(ny(j) - ny(i), nx(j) - nx(i));
+            const offsetX = -Math.sin(angle) * 14;
+            const offsetY = Math.cos(angle) * 14;
+            
+            ctx.font = `600 11px var(--font-sans)`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const txt = MATRIX[i][j] + ' km';
+            const tw = ctx.measureText(txt).width + 12;
+            
+            // Semi-transparent background for better readability
+            ctx.fillStyle = isDark() ? 'rgba(30,30,32,0.92)' : 'rgba(255,255,255,0.95)';
+            ctx.shadowColor = 'rgba(0,0,0,0.1)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetY = 1;
+            ctx.roundRect(mx + offsetX - tw/2, my + offsetY - 11, tw, 22, 6);
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.fillStyle = inPath ? '#b91c1c' : (isDark() ? '#e0e0e0' : '#444');
+            ctx.fillText(txt, mx + offsetX, my + offsetY);
+          }
+        }
+
+        // Draw nodes with enhanced styling
+        for(let i = 0; i < N; i++) {
+          const x = nx(i), y = ny(i);
+          let color = '#6366f1';
+          let size = 20;
+          let icon = '';
+          
+          if(i === startNode) {
+            color = '#22c55e';
+            size = 24;
+            icon = '🚀';
+          } else if(i === endNode) {
+            color = '#ef4444';
+            size = 24;
+            icon = '🎯';
+          } else if(shortPath.includes(i) && shortPath.length > 1) {
+            color = '#f59e0b';
+            icon = '📍';
+          } else {
+            icon = NODES[i].icon;
+          }
+
+          // Enhanced shadow effect
+          ctx.shadowColor = 'rgba(0,0,0,0.25)';
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetY = 3;
+          
+          // Main node circle
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          
+          // Gradient fill for nodes
+          const nodeGradient = ctx.createRadialGradient(x-3, y-3, 0, x, y, size);
+          nodeGradient.addColorStop(0, color);
+          nodeGradient.addColorStop(1, adjustColor(color, -20));
+          ctx.fillStyle = nodeGradient;
+          ctx.fill();
+          
+          // White border
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          // Node number
+          ctx.font = `bold 12px var(--font-sans)`;
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(i, x, y - 2);
+          
+          // Icon
+          ctx.font = `14px var(--font-sans)`;
+          ctx.fillText(icon, x, y + 8);
+
+          // Enhanced label with icon
+          const labelY = y + size + 18;
+          const label = `${NODES[i].icon} ${NODES[i].name}`;
+          ctx.font = `500 12px var(--font-sans)`;
+          const lw = ctx.measureText(label).width + 16;
+          
+          ctx.fillStyle = isDark() ? 'rgba(30,30,32,0.92)' : 'rgba(255,255,255,0.95)';
+          ctx.shadowColor = 'rgba(0,0,0,0.1)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetY = 1;
+          ctx.roundRect(x - lw/2, labelY - 11, lw, 22, 6);
+          ctx.fill();
+          
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetY = 0;
+          ctx.fillStyle = isDark() ? '#e5e5e5' : '#222';
+          ctx.fillText(label, x, labelY);
+        }
+      }
+
+      // Helper to adjust color brightness
+      function adjustColor(color, percent) {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+        const G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+        const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+        return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+      }
+
+      // Enhanced click detection with visual feedback
+      function getClickedNode(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left);
+        const cy = (e.clientY - rect.top);
+        
+        for(let i = 0; i < N; i++) {
+          if(Math.hypot(cx - nx(i), cy - ny(i)) < 28) {
+            // Visual feedback on hover
+            canvas.style.cursor = 'pointer';
+            return i;
+          }
+        }
+        canvas.style.cursor = 'default';
+        return null;
+      }
+
+      // Canvas event listeners with enhanced feedback
+      canvas.addEventListener('mousemove', (e) => {
+        const node = getClickedNode(e);
+        canvas.style.cursor = node !== null ? 'pointer' : 'default';
+      });
+
+      canvas.addEventListener('click', (e) => {
+        const n = getClickedNode(e);
+        if(n === null) return;
+        
+        // Add click animation
+        animateNodeClick(n);
+        
+        if(clickPhase === 0 || clickPhase === 2) {
+          startNode = n;
+          endNode = null;
+          shortPath = [];
+          clickPhase = 1;
+          document.getElementById('sel-start').value = n;
+          draw();
+          setResult(`
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">🚀</span>
+              <div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Start: ${NODES[n].name}</div>
+                <div style="font-size: 13px; opacity: 0.8;">Now click on destination node</div>
+              </div>
+            </div>
+          `);
+        } else if(clickPhase === 1 && n !== startNode) {
+          endNode = n;
+          clickPhase = 2;
+          document.getElementById('sel-end').value = n;
+          draw();
+          findPath();
+        }
+      });
+
+      // Simple click animation
+      function animateNodeClick(nodeIndex) {
+        const x = nx(nodeIndex);
+        const y = ny(nodeIndex);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 30, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fill();
+        
+        setTimeout(() => draw(), 100);
+      }
+
+      // Enhanced Dijkstra implementation with detailed steps
+      function dijkstra(src, dst) {
+        const dist = new Array(N).fill(INF);
+        const prev = new Array(N).fill(-1);
+        const vis = new Array(N).fill(false);
+        const steps = [];
+        let visitedCount = 0;
+        
+        dist[src] = 0;
+        steps.push({
+          text: `🎯 <b>Initialization:</b> Set distance to ${NODES[src].name} = 0 km, all other nodes = ∞`,
+          active: true
+        });
+        
+        for(let iter = 0; iter < N; iter++) {
+          // Find unvisited node with minimum distance
+          let u = -1, md = INF;
+          for(let i = 0; i < N; i++) {
+            if(!vis[i] && dist[i] < md) {
+              md = dist[i];
+              u = i;
+            }
+          }
+          
+          if(u === -1) {
+            steps.push({
+              text: `⚠️ No more reachable nodes. Search terminated.`,
+              active: false
+            });
+            break;
+          }
+          
+          vis[u] = true;
+          visitedCount++;
+          
+          const isTarget = u === dst;
+          steps.push({
+            text: `${isTarget ? '🎉' : '📍'} <b>Visit ${NODES[u].name}</b> (current shortest distance: ${md} km)${isTarget ? ' ← TARGET REACHED!' : ''}`,
+            active: isTarget
+          });
+          
+          // Relax all adjacent edges
+          let relaxations = 0;
+          for(let v = 0; v < N; v++) {
+            if(!vis[v] && MATRIX[u][v] !== INF && MATRIX[u][v] !== 0) {
+              const nd = dist[u] + MATRIX[u][v];
+              if(nd < dist[v]) {
+                relaxations++;
+                const oldDist = dist[v] === INF ? '∞' : dist[v] + ' km';
+                const improvement = dist[v] === INF ? '' : ` (improved by ${dist[v] - nd} km)`;
+                steps.push({
+                  text: `  ↳ <b>Update ${NODES[v].name}:</b> ${dist[u]} + ${MATRIX[u][v]} = ${nd} km (was ${oldDist})${improvement}`,
+                  active: false
+                });
+                dist[v] = nd;
+                prev[v] = u;
+              }
+            }
+          }
+          
+          if(relaxations === 0 && u !== dst) {
+            steps.push({
+              text: `  ℹ️ No distance updates from ${NODES[u].name}`,
+              active: false
+            });
+          }
+        }
+        
+        if(dist[dst] === INF) {
+          steps.push({
+            text: `❌ <b>No path exists</b> from ${NODES[src].name} to ${NODES[dst].name}`,
+            active: true
+          });
+          return { path: null, dist: INF, steps, visitedCount };
+        }
+        
+        // Reconstruct path
+        const path = [];
+        let cur = dst;
+        while(cur !== -1) {
+          path.unshift(cur);
+          cur = prev[cur];
+        }
+        
+        if(path[0] !== src) {
+          return { path: null, dist: INF, steps, visitedCount };
+        }
+        
+        steps.push({
+          text: `✨ <b>Path found!</b> Total distance: ${dist[dst]} km`,
+          active: true
+        });
+        
+        return { path, dist: dist[dst], steps, visitedCount };
+      }
+
+      // Main pathfinding function with loading state
+      function findPath() {
+        if(isProcessing) return;
+        
+        const ss = document.getElementById('sel-start').value;
+        const se = document.getElementById('sel-end').value;
+        startNode = parseInt(ss);
+        endNode = parseInt(se);
+        
+        if(startNode === endNode) {
+          setResult(`
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">⚠️</span>
+              <div>
+                <div style="font-weight: 600;">Invalid selection</div>
+                <div style="font-size: 13px; opacity: 0.8;">Start and end must be different locations</div>
+              </div>
+            </div>
+          `);
+          return;
+        }
+        
+        isProcessing = true;
+        showLoading();
+        
+        // Simulate processing for smooth UX
+        setTimeout(() => {
+          const result = dijkstra(startNode, endNode);
+          shortPath = result.path || [];
+          lastSteps = result.steps;
+          
+          draw();
+          renderSteps(result.steps);
+          renderMatrix(shortPath);
+          updateStats(result);
+          
+          if(result.path) {
+            const pathStr = result.path.map(i => 
+              `<span class="path-tag">${NODES[i].icon} ${NODES[i].name}</span>`
+            ).join(' → ');
+            
+            setResult(`
+              <div style="margin-bottom: 12px;">${pathStr}</div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0;">
+                <span style="font-size: 20px;">✅</span>
+                <span style="font-weight: 700; font-size: 16px; color: var(--color-accent);">
+                  Total distance: ${result.dist} km
+                </span>
+              </div>
+            `);
+          } else {
+            setResult(`
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 24px;">❌</span>
+                <div>
+                  <div style="font-weight: 600;">No path found</div>
+                  <div style="font-size: 13px; opacity: 0.8;">These locations are not connected</div>
+                </div>
+              </div>
+            `);
+          }
+          
+          isProcessing = false;
+        }, 100);
+      }
+
+      function showLoading() {
+        setResult(`
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="loading"></div>
+            <div>Computing shortest path...</div>
+          </div>
+        `);
+      }
+
+      // Enhanced reset function
+      function reset() {
+        startNode = 0;
+        endNode = 7;
+        shortPath = [];
+        clickPhase = 0;
+        
+        document.getElementById('sel-start').value = '0';
+        document.getElementById('sel-end').value = '7';
+        
+        draw();
+        renderMatrix([]);
+        
+        document.getElementById('steps-list').innerHTML = `
+          <div class="step-item" style="opacity: 0.8;">
+            <span>🎯 Ready to execute Dijkstra's algorithm</span>
+          </div>
+          <div class="step-item" style="opacity: 0.6; font-style: italic;">
+            <span>Select start and end nodes to begin pathfinding</span>
+          </div>
+        `;
+        
+        setResult(`
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 20px;">👆</span> 
+            <div>
+              <div style="font-weight: 600; margin-bottom: 4px;">Ready to find shortest path</div>
+              <div style="font-size: 13px; opacity: 0.8;">Click on map nodes or use dropdown menus above</div>
+            </div>
+          </div>
+        `);
+        
+        document.getElementById('stats-panel').style.display = 'none';
+      }
+
+      // Swap nodes function
+      function swapNodes() {
+        [startNode, endNode] = [endNode, startNode];
+        document.getElementById('sel-start').value = startNode;
+        document.getElementById('sel-end').value = endNode;
+        
+        if(shortPath.length > 0) {
+          findPath();
+        } else {
+          draw();
+          setResult(`
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 20px;">🔄</span>
+              <div>
+                <div style="font-weight: 600;">Nodes swapped</div>
+                <div style="font-size: 13px; opacity: 0.8;">
+                  Start: ${NODES[startNode].name} → End: ${NODES[endNode].name}
+                </div>
+              </div>
+            </div>
+          `);
+        }
+      }
+
+      // Clear steps function
+      function clearSteps() {
+        document.getElementById('steps-list').innerHTML = `
+          <div class="step-item" style="opacity: 0.8;">
+            <span>📝 Steps cleared</span>
+          </div>
+          <div class="step-item" style="opacity: 0.6; font-style: italic;">
+            <span>Run pathfinding to see algorithm execution</span>
+          </div>
+        `;
+      }
+
+      // Enhanced step rendering
+      function renderSteps(steps) {
+        const el = document.getElementById('steps-list');
+        el.innerHTML = steps.map(s => 
+          `<div class="step-item${s.active ? ' active' : ''}">${s.text}</div>`
+        ).join('');
+        
+        if(autoScroll) {
+          setTimeout(() => el.scrollTop = el.scrollHeight, 50);
+        }
+      }
+
+      // Enhanced matrix rendering with animations
+      function renderMatrix(path) {
+        const pairs = new Set();
+        for(let k = 0; k < path.length - 1; k++) {
+          pairs.add(path[k] + ',' + path[k+1]);
+          pairs.add(path[k+1] + ',' + path[k]);
+        }
+        
+        const shortNames = NODES.map(n => n.name.slice(0, 4));
+        let html = '<table class="mx"><tr><th></th>' + 
+          shortNames.map(s => `<th>${s}</th>`).join('') + '</tr>';
+        
+        for(let i = 0; i < N; i++) {
+          html += `<tr><th>${shortNames[i]}</th>`;
+          for(let j = 0; j < N; j++) {
+            const v = MATRIX[i][j];
+            const isPath = pairs.has(i + ',' + j) && v !== INF;
+            const isSrc = (i === startNode || j === startNode) && v !== INF && !isPath;
+            const cls = isPath ? 'hi-path' : isSrc ? 'hi-src' : v === INF ? 'inf' : '';
+            const displayVal = v === INF ? '∞' : v === 0 ? '—' : v;
+            html += `<td class="${cls}">${displayVal}</td>`;
+          }
+          html += '</tr>';
+        }
+        html += '</table>';
+        document.getElementById('matrix-wrap').innerHTML = html;
+      }
+
+      // Enhanced stats update
+      function updateStats(result) {
+        const panel = document.getElementById('stats-panel');
+        if(result.path) {
+          document.getElementById('stat-distance').textContent = result.dist + ' km';
+          document.getElementById('stat-visited').textContent = result.visitedCount;
+          document.getElementById('stat-pathlen').textContent = result.path.length + ' nodes';
+          panel.style.display = 'flex';
+        } else {
+          panel.style.display = 'none';
+        }
+      }
+
+      // Toggle auto-scroll
+      function toggleAutoScroll() {
+        autoScroll = !autoScroll;
+        const btn = document.getElementById('autoscroll-btn');
+        btn.innerHTML = autoScroll ? '<span>⚡</span> Auto-scroll' : '<span>📌</span> Manual';
+        btn.style.opacity = autoScroll ? '1' : '0.7';
+      }
+
+      // Enhanced result display
+      function setResult(html) {
+        document.getElementById('result-box').innerHTML = html;
+      }
+
+      // Initialize dropdowns and UI
+      function init() {
+        const ss = document.getElementById('sel-start');
+        const se = document.getElementById('sel-end');
+        ss.innerHTML = se.innerHTML = '';
+        
+        NODES.forEach((n, i) => {
+          const opt1 = new Option(`${n.icon} ${n.name} (${i})`, i);
+          const opt2 = new Option(`${n.icon} ${n.name} (${i})`, i);
+          ss.add(opt1);
+          se.add(opt2);
+        });
+        
+        se.value = '7';
+        document.getElementById('node-count').textContent = `${N} locations`;
+        renderMatrix([]);
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+          if(e.key === 'f' && e.ctrlKey) {
+            e.preventDefault();
+            findPath();
+          } else if(e.key === 'r' && e.ctrlKey) {
+            e.preventDefault();
+            reset();
+          } else if(e.key === 's' && e.ctrlKey) {
+            e.preventDefault();
+            swapNodes();
+          }
+        });
+        
+        window.addEventListener('resize', resize);
+        resize();
+        
+        // Add tooltip hint for keyboard shortcuts
+        console.log('💡 Keyboard shortcuts: Ctrl+F = Find path, Ctrl+R = Reset, Ctrl+S = Swap nodes');
+      }
+
+      // Expose functions globally
+      window.findPath = findPath;
+      window.reset = reset;
+      window.swapNodes = swapNodes;
+      window.toggleAutoScroll = toggleAutoScroll;
+      window.clearSteps = clearSteps;
+
+      // Start the application
+      init();
+    })();
+  </script>
+</body>
+</html>
